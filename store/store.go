@@ -2,26 +2,21 @@ package store
 
 import "time"
 
-type Store struct {
-	HitCount       uint
-	LastHit        time.Time
-	Blocked        bool
-	MaxRequests    uint
-	LimitInSeconds uint64
-	BlockInSeconds uint64
+const (
+	InMemoryStoreStrategy = "in_memory"
+)
+
+type Store interface {
+	ShouldLimit() bool
+	ShouldRefresh() bool
+	Refresh()
+	IsBlocked() bool
+	RemainingBlockTime() uint64
+	Block()
+	Hit()
+	LastHit() time.Time
+	HitCount() uint
 }
 
-type TokenStore map[string]*Store
+type TokenStore map[string]Store
 type IpStore map[string]TokenStore
-
-func (s *Store) ShouldRefresh() bool {
-	LastHit := uint64(time.Now().Unix() - s.LastHit.Unix())
-	if s.Blocked {
-		return LastHit > s.BlockInSeconds
-	}
-	return LastHit > s.LimitInSeconds
-}
-
-func (s *Store) ShouldLimit() bool {
-	return s.HitCount > s.MaxRequests
-}

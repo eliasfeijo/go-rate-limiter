@@ -15,11 +15,11 @@ type RateLimiterMiddleware struct {
 	rateLimiter *limiter.RateLimiter
 }
 
-func NewRateLimitMiddleware(config *limiter.RateLimiterConfig) *RateLimiterMiddleware {
+func NewRateLimitMiddleware(config *limiter.RateLimiterConfig, storeStrategy string) *RateLimiterMiddleware {
 	return &RateLimiterMiddleware{
 		store:       make(store.IpStore),
 		handler:     http.DefaultServeMux,
-		rateLimiter: limiter.NewRateLimiter(config),
+		rateLimiter: limiter.NewRateLimiter(config, storeStrategy),
 	}
 }
 

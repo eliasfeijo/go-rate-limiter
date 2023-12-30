@@ -7,6 +7,7 @@ import (
 	"github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/eliasfeijo/go-rate-limiter/limiter"
 	"github.com/eliasfeijo/go-rate-limiter/middleware"
+	"github.com/eliasfeijo/go-rate-limiter/store"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
@@ -26,7 +27,7 @@ func main() {
 		TokensHeaderKey:         cfg.RateLimiterTokensHeaderKey,
 		TokensConfig:            cfg.TokensConfig,
 	}
-	rateLimiterMiddleware := middleware.NewRateLimitMiddleware(rateLimiterConfig)
+	rateLimiterMiddleware := middleware.NewRateLimitMiddleware(rateLimiterConfig, store.InMemoryStoreStrategy)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
