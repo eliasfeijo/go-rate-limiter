@@ -6,28 +6,38 @@ import (
 	"strings"
 	"time"
 
+	"github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Store struct {
-	HitCount int
-	lastHit  time.Time
-	blocked  bool
+	HitCount       int
+	lastHit        time.Time
+	blocked        bool
+	limitInSeconds int64
+	blockInSeconds int64
 }
 
 var store map[string]*Store
-var expiryInSeconds int64 = 20
-var blockInSeconds int64 = 10
 
 func main() {
+	err := config.LoadConfig()
+	if err != nil {
+		panic("Error loading config")
+	}
+
+	cfg := config.GetConfig()
+	limitInSeconds := cfg.RateLimiterIpAddressLimitInSeconds
+	blockInSeconds := cfg.RateLimiterIpAddressBlockInSeconds
+
 	store = make(map[string]*Store)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		ip := strings.Split(r.RemoteAddr, ":")[0]
 		if _, ok := store[ip]; !ok {
-			store[ip] = &Store{HitCount: 1, lastHit: time.Now(), blocked: false}
+			store[ip] = &Store{HitCount: 1, lastHit: time.Now(), blocked: false, limitInSeconds: limitInSeconds, blockInSeconds: blockInSeconds}
 		} else {
 			if store[ip].shouldRefresh() {
 				fmt.Println("Refreshing")
@@ -55,15 +65,15 @@ func main() {
 		fmt.Fprintf(w, "Hello, %s! You have hit me %d times.", ip, store[ip].HitCount)
 		w.Write([]byte("Welcome!"))
 	})
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":"+cfg.Port, r)
 }
 
 func (s *Store) shouldRefresh() bool {
 	lastHit := time.Now().Unix() - s.lastHit.Unix()
 	if s.blocked {
-		return lastHit > blockInSeconds
+		return lastHit > s.blockInSeconds
 	}
-	return lastHit > expiryInSeconds
+	return lastHit > s.limitInSeconds
 }
 
 func (s *Store) shouldLimit() bool {
