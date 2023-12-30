@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
+	"github.com/eliasfeijo/go-rate-limiter/limiter"
 	"github.com/eliasfeijo/go-rate-limiter/middleware"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -18,7 +19,7 @@ func main() {
 
 	cfg := config.GetConfig()
 
-	rateLimiterConfig := &middleware.RateLimiterConfig{
+	rateLimiterConfig := &limiter.RateLimiterConfig{
 		MaxRequestsIpAddress:    cfg.RateLimiterIpAddressMaxRequests,
 		LimitInSecondsIpAddress: cfg.RateLimiterIpAddressLimitInSeconds,
 		BlockInSecondsIpAddress: cfg.RateLimiterIpAddressBlockInSeconds,
