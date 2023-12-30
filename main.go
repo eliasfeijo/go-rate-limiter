@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
@@ -25,6 +26,8 @@ type IpStore map[string]TokenStore
 
 var store IpStore
 
+var mutex = &sync.Mutex{}
+
 func main() {
 	err := config.LoadConfig()
 	if err != nil {
@@ -41,6 +44,8 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		mutex.Lock()
+		defer mutex.Unlock()
 		ip := strings.Split(r.RemoteAddr, ":")[0]
 		token := r.Header.Get(tokensHeaderKey)
 		if _, ok := store[ip][token]; !ok {
@@ -63,13 +68,14 @@ func main() {
 			}
 		} else {
 			if store[ip][token].shouldRefresh() {
-				fmt.Println("Refreshing")
+				fmt.Printf("IP: %s, Token: %s, Refreshing", ip, token)
 				store[ip][token].HitCount = 1
 				store[ip][token].LastHit = time.Now()
 				store[ip][token].Blocked = false
 			} else {
 				if store[ip][token].Blocked {
-					fmt.Println("Blocked")
+					remainingTime := store[ip][token].BlockInSeconds - uint64(time.Now().Unix()-store[ip][token].LastHit.Unix())
+					fmt.Printf("IP: %s, Token: %s, Blocked for more %d seconds\n", ip, token, remainingTime)
 					limit(w)
 					return
 				}
