@@ -8,23 +8,10 @@ import (
 	"time"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
+	"github.com/eliasfeijo/go-rate-limiter/limiter"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
-
-type Store struct {
-	HitCount       uint
-	LastHit        time.Time
-	Blocked        bool
-	MaxRequests    uint
-	LimitInSeconds uint64
-	BlockInSeconds uint64
-}
-
-type TokenStore map[string]*Store
-type IpStore map[string]TokenStore
-
-var store IpStore
 
 var mutex = &sync.Mutex{}
 
@@ -40,7 +27,7 @@ func main() {
 	blockInSecondsIpAddress := cfg.RateLimiterIpAddressBlockInSeconds
 	tokensHeaderKey := cfg.RateLimiterTokensHeaderKey
 
-	store = make(IpStore)
+	store := make(limiter.IpStore)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +44,8 @@ func main() {
 				limitInSeconds = cfg.TokensConfig[token].LimitInSeconds
 				blockInSeconds = cfg.TokensConfig[token].BlockInSeconds
 			}
-			store[ip] = make(map[string]*Store)
-			store[ip][token] = &Store{
+			store[ip] = make(map[string]*limiter.Store)
+			store[ip][token] = &limiter.Store{
 				HitCount:       1,
 				LastHit:        time.Now(),
 				Blocked:        false,
@@ -67,7 +54,7 @@ func main() {
 				BlockInSeconds: blockInSeconds,
 			}
 		} else {
-			if store[ip][token].shouldRefresh() {
+			if store[ip][token].ShouldRefresh() {
 				fmt.Printf("IP: %s, Token: %s, Refreshing", ip, token)
 				store[ip][token].HitCount = 1
 				store[ip][token].LastHit = time.Now()
@@ -86,7 +73,7 @@ func main() {
 		}
 		lastHit := uint(time.Now().Unix() - store[ip][token].LastHit.Unix())
 		fmt.Printf("IP: %s, Token: %s, HitCount: %d, LastHit: %s, Blocked: %v\n", ip, token, store[ip][token].HitCount, fmt.Sprint(lastHit)+"s", store[ip][token].Blocked)
-		if store[ip][token].shouldLimit() {
+		if store[ip][token].ShouldLimit() {
 			fmt.Println("Limiting")
 			store[ip][token].Blocked = true
 			limit(w)
@@ -95,18 +82,6 @@ func main() {
 		fmt.Fprintf(w, "Hello, %s! You have hit me %d times.", ip, store[ip][token].HitCount)
 	})
 	http.ListenAndServe(":"+cfg.Port, r)
-}
-
-func (s *Store) shouldRefresh() bool {
-	LastHit := uint64(time.Now().Unix() - s.LastHit.Unix())
-	if s.Blocked {
-		return LastHit > s.BlockInSeconds
-	}
-	return LastHit > s.LimitInSeconds
-}
-
-func (s *Store) shouldLimit() bool {
-	return s.HitCount > s.MaxRequests
 }
 
 func limit(w http.ResponseWriter) {
