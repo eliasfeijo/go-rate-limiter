@@ -13,10 +13,10 @@ import (
 
 type Store struct {
 	HitCount       int
-	lastHit        time.Time
-	blocked        bool
-	limitInSeconds int64
-	blockInSeconds int64
+	LastHit        time.Time
+	Blocked        bool
+	LimitInSeconds int64
+	BlockInSeconds int64
 }
 
 var store map[string]*Store
@@ -37,28 +37,28 @@ func main() {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		ip := strings.Split(r.RemoteAddr, ":")[0]
 		if _, ok := store[ip]; !ok {
-			store[ip] = &Store{HitCount: 1, lastHit: time.Now(), blocked: false, limitInSeconds: limitInSeconds, blockInSeconds: blockInSeconds}
+			store[ip] = &Store{HitCount: 1, LastHit: time.Now(), Blocked: false, LimitInSeconds: limitInSeconds, BlockInSeconds: blockInSeconds}
 		} else {
 			if store[ip].shouldRefresh() {
 				fmt.Println("Refreshing")
 				store[ip].HitCount = 1
-				store[ip].lastHit = time.Now()
-				store[ip].blocked = false
+				store[ip].LastHit = time.Now()
+				store[ip].Blocked = false
 			} else {
-				if store[ip].blocked {
+				if store[ip].Blocked {
 					fmt.Println("Blocked")
 					limit(w)
 					return
 				}
 				fmt.Println("Incrementing")
 				store[ip].HitCount++
-				store[ip].lastHit = time.Now()
+				store[ip].LastHit = time.Now()
 			}
 		}
-		fmt.Printf("IP: %s, HitCount: %d, LastHit: %s, blockedAt: %v\n", ip, store[ip].HitCount, store[ip].lastHit, store[ip].blocked)
+		fmt.Printf("IP: %s, HitCount: %d, LastHit: %s, BlockedAt: %v\n", ip, store[ip].HitCount, store[ip].LastHit, store[ip].Blocked)
 		if store[ip].shouldLimit() {
 			fmt.Println("Limiting")
-			store[ip].blocked = true
+			store[ip].Blocked = true
 			limit(w)
 			return
 		}
@@ -69,11 +69,11 @@ func main() {
 }
 
 func (s *Store) shouldRefresh() bool {
-	lastHit := time.Now().Unix() - s.lastHit.Unix()
-	if s.blocked {
-		return lastHit > s.blockInSeconds
+	LastHit := time.Now().Unix() - s.LastHit.Unix()
+	if s.Blocked {
+		return LastHit > s.BlockInSeconds
 	}
-	return lastHit > s.limitInSeconds
+	return LastHit > s.LimitInSeconds
 }
 
 func (s *Store) shouldLimit() bool {
