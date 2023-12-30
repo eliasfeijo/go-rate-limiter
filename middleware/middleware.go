@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
-	"github.com/eliasfeijo/go-rate-limiter/limiter"
+	"github.com/eliasfeijo/go-rate-limiter/store"
 )
 
 type RateLimiterConfig struct {
@@ -20,7 +20,7 @@ type RateLimiterConfig struct {
 }
 
 type RateLimiter struct {
-	store   limiter.IpStore
+	store   store.IpStore
 	config  *RateLimiterConfig
 	mutex   sync.Mutex
 	handler http.Handler
@@ -28,7 +28,7 @@ type RateLimiter struct {
 
 func NewRateLimitMiddleware(config *RateLimiterConfig) *RateLimiter {
 	return &RateLimiter{
-		store:   make(limiter.IpStore),
+		store:   make(store.IpStore),
 		config:  config,
 		mutex:   sync.Mutex{},
 		handler: http.DefaultServeMux,
@@ -56,8 +56,8 @@ func (rl *RateLimiter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			limitInSeconds = rl.config.TokensConfig[token].LimitInSeconds
 			blockInSeconds = rl.config.TokensConfig[token].BlockInSeconds
 		}
-		rl.store[ip] = make(map[string]*limiter.Store)
-		rl.store[ip][token] = &limiter.Store{
+		rl.store[ip] = make(map[string]*store.Store)
+		rl.store[ip][token] = &store.Store{
 			HitCount:       1,
 			LastHit:        time.Now(),
 			Blocked:        false,
