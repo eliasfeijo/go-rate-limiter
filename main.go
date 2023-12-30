@@ -12,14 +12,18 @@ import (
 )
 
 type Store struct {
-	HitCount       int
+	HitCount       uint
 	LastHit        time.Time
 	Blocked        bool
-	LimitInSeconds int64
-	BlockInSeconds int64
+	MaxRequests    uint
+	LimitInSeconds uint64
+	BlockInSeconds uint64
 }
 
-var store map[string]*Store
+type TokenStore map[string]*Store
+type IpStore map[string]TokenStore
+
+var store IpStore
 
 func main() {
 	err := config.LoadConfig()
@@ -28,48 +32,67 @@ func main() {
 	}
 
 	cfg := config.GetConfig()
-	limitInSeconds := cfg.RateLimiterIpAddressLimitInSeconds
-	blockInSeconds := cfg.RateLimiterIpAddressBlockInSeconds
+	maxRequestsIpAddress := cfg.RateLimiterIpAddressMaxRequests
+	limitInSecondsIpAddress := cfg.RateLimiterIpAddressLimitInSeconds
+	blockInSecondsIpAddress := cfg.RateLimiterIpAddressBlockInSeconds
+	tokensHeaderKey := cfg.RateLimiterTokensHeaderKey
 
-	store = make(map[string]*Store)
+	store = make(IpStore)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		ip := strings.Split(r.RemoteAddr, ":")[0]
-		if _, ok := store[ip]; !ok {
-			store[ip] = &Store{HitCount: 1, LastHit: time.Now(), Blocked: false, LimitInSeconds: limitInSeconds, BlockInSeconds: blockInSeconds}
+		token := r.Header.Get(tokensHeaderKey)
+		if _, ok := store[ip][token]; !ok {
+			maxRequests := maxRequestsIpAddress
+			limitInSeconds := limitInSecondsIpAddress
+			blockInSeconds := blockInSecondsIpAddress
+			if token != "" {
+				maxRequests = cfg.TokensConfig[token].MaxRequests
+				limitInSeconds = cfg.TokensConfig[token].LimitInSeconds
+				blockInSeconds = cfg.TokensConfig[token].BlockInSeconds
+			}
+			store[ip] = make(map[string]*Store)
+			store[ip][token] = &Store{
+				HitCount:       1,
+				LastHit:        time.Now(),
+				Blocked:        false,
+				MaxRequests:    uint(maxRequests),
+				LimitInSeconds: limitInSeconds,
+				BlockInSeconds: blockInSeconds,
+			}
 		} else {
-			if store[ip].shouldRefresh() {
+			if store[ip][token].shouldRefresh() {
 				fmt.Println("Refreshing")
-				store[ip].HitCount = 1
-				store[ip].LastHit = time.Now()
-				store[ip].Blocked = false
+				store[ip][token].HitCount = 1
+				store[ip][token].LastHit = time.Now()
+				store[ip][token].Blocked = false
 			} else {
-				if store[ip].Blocked {
+				if store[ip][token].Blocked {
 					fmt.Println("Blocked")
 					limit(w)
 					return
 				}
 				fmt.Println("Incrementing")
-				store[ip].HitCount++
-				store[ip].LastHit = time.Now()
+				store[ip][token].HitCount++
+				store[ip][token].LastHit = time.Now()
 			}
 		}
-		fmt.Printf("IP: %s, HitCount: %d, LastHit: %s, BlockedAt: %v\n", ip, store[ip].HitCount, store[ip].LastHit, store[ip].Blocked)
-		if store[ip].shouldLimit() {
+		lastHit := uint(time.Now().Unix() - store[ip][token].LastHit.Unix())
+		fmt.Printf("IP: %s, Token: %s, HitCount: %d, LastHit: %s, Blocked: %v\n", ip, token, store[ip][token].HitCount, fmt.Sprint(lastHit)+"s", store[ip][token].Blocked)
+		if store[ip][token].shouldLimit() {
 			fmt.Println("Limiting")
-			store[ip].Blocked = true
+			store[ip][token].Blocked = true
 			limit(w)
 			return
 		}
-		fmt.Fprintf(w, "Hello, %s! You have hit me %d times.", ip, store[ip].HitCount)
-		w.Write([]byte("Welcome!"))
+		fmt.Fprintf(w, "Hello, %s! You have hit me %d times.", ip, store[ip][token].HitCount)
 	})
 	http.ListenAndServe(":"+cfg.Port, r)
 }
 
 func (s *Store) shouldRefresh() bool {
-	LastHit := time.Now().Unix() - s.LastHit.Unix()
+	LastHit := uint64(time.Now().Unix() - s.LastHit.Unix())
 	if s.Blocked {
 		return LastHit > s.BlockInSeconds
 	}
@@ -77,7 +100,7 @@ func (s *Store) shouldRefresh() bool {
 }
 
 func (s *Store) shouldLimit() bool {
-	return s.HitCount > 2
+	return s.HitCount > s.MaxRequests
 }
 
 func limit(w http.ResponseWriter) {
