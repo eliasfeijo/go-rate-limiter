@@ -37,6 +37,9 @@ func NewRedisStore(ip string, token string, maxRequests uint, limitInSeconds uin
 	fmt.Println("Creating RedisStore")
 	ctx := context.Background()
 	key := ip + ":" + token
+	rdb.Set(ctx, key+":hitCount", 0, 0)
+	rdb.Set(ctx, key+":lastHit", time.Now().Unix(), 0)
+	rdb.Set(ctx, key+":isBlocked", false, 0)
 	return &RedisStore{maxRequests, limitInSeconds, blockInSeconds, key, ctx}
 }
 
