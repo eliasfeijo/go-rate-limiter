@@ -30,10 +30,10 @@ func CreateRedisClient() {
 		Password: cfg.RateLimiterRedisConfig.Password,
 		DB:       cfg.RateLimiterRedisConfig.DB,
 	})
+	fmt.Println("Redis connection created successfully: ", rdb)
 }
 
 func NewRedisStore(ip string, token string, maxRequests uint, limitInSeconds uint64, blockInSeconds uint64) *RedisStore {
-	fmt.Println("Redis connection created successfully: ", rdb)
 	fmt.Println("Creating RedisStore")
 	ctx := context.Background()
 	key := ip + ":" + token

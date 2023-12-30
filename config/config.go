@@ -47,6 +47,8 @@ type Config struct {
 	RateLimiterTokensHeaderKey string `mapstructure:"RATE_LIMITER_TOKENS_HEADER_KEY"`
 	// A list of tokens separated by a comma and their respective max requests, limit and block durations in seconds separated by a colon
 	RateLimiterTokensConfigTuple string `mapstructure:"RATE_LIMITER_TOKENS_CONFIG_TUPLE"`
+	// The strategy to use for the store
+	RateLimiterStoreStrategy string `mapstructure:"RATE_LIMITER_STORE_STRATEGY"`
 
 	// A map of tokens and their respective max requests, limit and block durations in seconds
 	TokensConfig
@@ -71,6 +73,7 @@ func LoadConfig() (err error) {
 	viper.SetDefault("RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS", 5)
 	viper.SetDefault("RATE_LIMITER_TOKENS_HEADER_KEY", "API_KEY")
 	viper.SetDefault("RATE_LIMITER_TOKENS_CONFIG_TUPLE", "")
+	viper.SetDefault("RATE_LIMITER_STORE_STRATEGY", "in_memory")
 	viper.SetDefault("RATE_LIMITER_REDIS_HOST", "localhost")
 	viper.SetDefault("RATE_LIMITER_REDIS_PORT", "6379")
 	viper.SetDefault("RATE_LIMITER_REDIS_PASSWORD", "")
