@@ -20,6 +20,17 @@ type RateLimiterTokenConfig struct {
 	BlockInSeconds uint64
 }
 
+type RateLimiterRedisConfig struct {
+	// Redis host
+	Host string `mapstructure:"RATE_LIMITER_REDIS_HOST"`
+	// Redis port
+	Port string `mapstructure:"RATE_LIMITER_REDIS_PORT"`
+	// Redis password
+	Password string `mapstructure:"RATE_LIMITER_REDIS_PASSWORD"`
+	// Redis database
+	DB int `mapstructure:"RATE_LIMITER_REDIS_DB"`
+}
+
 // A map of tokens configurations
 type TokensConfig map[string]*RateLimiterTokenConfig
 
@@ -38,7 +49,10 @@ type Config struct {
 	RateLimiterTokensConfigTuple string `mapstructure:"RATE_LIMITER_TOKENS_CONFIG_TUPLE"`
 
 	// A map of tokens and their respective max requests, limit and block durations in seconds
-	TokensConfig TokensConfig
+	TokensConfig
+
+	// Redis configuration
+	RateLimiterRedisConfig `mapstructure:",squash"`
 }
 
 var config = &Config{}
@@ -57,6 +71,10 @@ func LoadConfig() (err error) {
 	viper.SetDefault("RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS", 5)
 	viper.SetDefault("RATE_LIMITER_TOKENS_HEADER_KEY", "API_KEY")
 	viper.SetDefault("RATE_LIMITER_TOKENS_CONFIG_TUPLE", "")
+	viper.SetDefault("RATE_LIMITER_REDIS_HOST", "localhost")
+	viper.SetDefault("RATE_LIMITER_REDIS_PORT", "6379")
+	viper.SetDefault("RATE_LIMITER_REDIS_PASSWORD", "")
+	viper.SetDefault("RATE_LIMITER_REDIS_DB", 0)
 
 	err = viper.ReadInConfig()
 	if err != nil {

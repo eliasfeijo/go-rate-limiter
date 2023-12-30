@@ -16,6 +16,9 @@ type RateLimiterMiddleware struct {
 }
 
 func NewRateLimitMiddleware(config *limiter.RateLimiterConfig, storeStrategy string) *RateLimiterMiddleware {
+	if storeStrategy == store.RedisStoreStrategy {
+		store.CreateRedisClient()
+	}
 	return &RateLimiterMiddleware{
 		store:       make(store.IpStore),
 		handler:     http.DefaultServeMux,

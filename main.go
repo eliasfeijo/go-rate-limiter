@@ -27,7 +27,7 @@ func main() {
 		TokensHeaderKey:         cfg.RateLimiterTokensHeaderKey,
 		TokensConfig:            cfg.TokensConfig,
 	}
-	rateLimiterMiddleware := middleware.NewRateLimitMiddleware(rateLimiterConfig, store.InMemoryStoreStrategy)
+	rateLimiterMiddleware := middleware.NewRateLimitMiddleware(rateLimiterConfig, store.RedisStoreStrategy)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)

@@ -4,6 +4,7 @@ import "time"
 
 const (
 	InMemoryStoreStrategy = "in_memory"
+	RedisStoreStrategy    = "redis"
 )
 
 type Store interface {

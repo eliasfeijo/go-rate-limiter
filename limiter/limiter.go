@@ -40,6 +40,7 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 	var s store.Store
 
 	if s, ok := rl.Store[ip][token]; !ok {
+		fmt.Println("Creating new store")
 		maxRequests := rl.Config.MaxRequestsIpAddress
 		limitInSeconds := rl.Config.LimitInSecondsIpAddress
 		blockInSeconds := rl.Config.BlockInSecondsIpAddress
@@ -50,6 +51,8 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 		}
 		rl.Store[ip] = make(store.TokenStore)
 		switch rl.storeStrategy {
+		case store.RedisStoreStrategy:
+			rl.Store[ip][token] = store.NewRedisStore(ip, token, uint(maxRequests), limitInSeconds, blockInSeconds)
 		default:
 		case store.InMemoryStoreStrategy:
 			rl.Store[ip][token] = store.NewInMemoryStore(uint(maxRequests), limitInSeconds, blockInSeconds)
@@ -69,8 +72,7 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 		}
 	}
 	s, _ = rl.Store[ip][token]
-	fmt.Printf("\n\nStore:%v\nLastHit:%v\n\n", s, s.LastHit())
-	lastHit := uint64(time.Now().Unix() - s.LastHit().Unix())
+	lastHit := time.Now().Unix() - s.LastHit().Unix()
 	fmt.Printf("IP: %s, Token: %s, HitCount: %d, LastHit: %s, Blocked: %v\n", ip, token, s.HitCount(), fmt.Sprint(lastHit)+"s", s.IsBlocked())
 	if s.ShouldLimit() {
 		fmt.Println("Blocking")
