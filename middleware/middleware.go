@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -46,6 +45,6 @@ func (m *RateLimiterMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 func cancelRequest(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusTooManyRequests)
-	fmt.Fprintf(w, "You have reached the maximum number of requests or actions allowed within a certain time frame")
+	w.Write([]byte("You have reached the maximum number of requests or actions allowed within a certain time frame"))
 	return
 }

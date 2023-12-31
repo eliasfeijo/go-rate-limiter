@@ -2,11 +2,11 @@ package store
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
+	"github.com/eliasfeijo/go-rate-limiter/log"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -30,11 +30,13 @@ func CreateRedisClient() {
 		Password: cfg.RateLimiterRedisConfig.Password,
 		DB:       cfg.RateLimiterRedisConfig.DB,
 	})
-	fmt.Println("Redis connection created successfully: ", rdb)
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		panic(err)
+	}
+	log.Log(log.Info, "Redis connection created successfully: ", rdb)
 }
 
 func NewRedisStore(ip string, token string, maxRequests uint, limitInSeconds uint64, blockInSeconds uint64) *RedisStore {
-	fmt.Println("Creating RedisStore")
 	ctx := context.Background()
 	key := ip + ":" + token
 	rdb.Set(ctx, key+":hitCount", 0, 0)

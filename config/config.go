@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/eliasfeijo/go-rate-limiter/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
@@ -76,7 +77,7 @@ func LoadConfig() (err error) {
 	if err != nil {
 		if err2, ok := err.(*os.PathError); !ok {
 			err = err2
-			fmt.Println("Error reading config file")
+			log.Log(log.Error, "Error reading config file")
 			return
 		}
 	}
@@ -88,13 +89,12 @@ func LoadConfig() (err error) {
 		viper.UnmarshalKey("RATE_LIMITER_TOKENS_CONFIG_TUPLE", &config.TokensConfig, viper.DecodeHook(tokensMapHookFunc()))
 	}
 
-	fmt.Println("Config loaded successfully")
-	fmt.Println("IP Address Max Requests:", config.RateLimiterIpAddressMaxRequests)
-	fmt.Println("IP Address Limit In Seconds:", config.RateLimiterIpAddressLimitInSeconds)
-	fmt.Println("IP Address Block In Seconds:", config.RateLimiterIpAddressBlockInSeconds)
+	log.Log(log.Debug, "IP Address Max Requests:", config.RateLimiterIpAddressMaxRequests)
+	log.Log(log.Debug, "IP Address Limit In Seconds:", config.RateLimiterIpAddressLimitInSeconds)
+	log.Log(log.Debug, "IP Address Block In Seconds:", config.RateLimiterIpAddressBlockInSeconds)
 	for token, tokenConfig := range config.TokensConfig {
-		fmt.Println("Token:", token)
-		fmt.Println(tokenConfig)
+		log.Log(log.Debug, "Token:", token)
+		log.Log(log.Debug, tokenConfig)
 	}
 	return
 }

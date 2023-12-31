@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
 	rlconfig "github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/eliasfeijo/go-rate-limiter/limiter"
+	"github.com/eliasfeijo/go-rate-limiter/log"
 	"github.com/eliasfeijo/go-rate-limiter/middleware"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -16,6 +16,8 @@ import (
 var port string
 
 func main() {
+	log.SetLogger(&Logger{})
+
 	loadConfig()
 	cfg := rlconfig.GetConfig()
 
@@ -32,10 +34,10 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(rateLimiterMiddleware.Handler)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Request accepted!")
+		w.Write([]byte("Request accepted"))
 	})
 
-	fmt.Println("Starting server on port " + port)
+	log.Log(log.Info, "Starting server on port "+port)
 	http.ListenAndServe(":"+port, r)
 }
 
@@ -62,4 +64,6 @@ func loadConfig() {
 	if err != nil {
 		panic("Error loading config")
 	}
+
+	log.Log(log.Info, "Config loaded successfully")
 }

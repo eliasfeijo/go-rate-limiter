@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
+	"github.com/eliasfeijo/go-rate-limiter/log"
 	"github.com/eliasfeijo/go-rate-limiter/store"
 )
 
@@ -34,13 +35,13 @@ func NewRateLimiter(config *RateLimiterConfig, storeStrategy string) *RateLimite
 }
 
 func (rl *RateLimiter) Limit(ip string, token string) bool {
-	rl.mutex.Lock()
-	defer rl.mutex.Unlock()
+	// rl.mutex.Lock()
+	// defer rl.mutex.Unlock()
 
 	var s store.Store
 
 	if s, ok := rl.Store[ip][token]; !ok {
-		fmt.Println("Creating new store")
+		log.Log(log.Debug, "Creating new store")
 		maxRequests := rl.Config.MaxRequestsIpAddress
 		limitInSeconds := rl.Config.LimitInSecondsIpAddress
 		blockInSeconds := rl.Config.BlockInSecondsIpAddress
@@ -60,22 +61,22 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 		s = rl.Store[ip][token]
 	} else {
 		if s.ShouldRefresh() {
-			fmt.Printf("IP: %s, Token: %s, Refreshing", ip, token)
+			log.Logf(log.Debug, "IP: %s, Token: %s, Refreshing", ip, token)
 			s.Refresh()
 		} else {
 			if s.IsBlocked() {
-				fmt.Printf("IP: %s, Token: %s, Blocked for more %d seconds\n", ip, token, s.RemainingBlockTime())
+				log.Logf(log.Debug, "IP: %s, Token: %s, Blocked for more %d seconds", ip, token, s.RemainingBlockTime())
 				return true
 			}
-			fmt.Println("Incrementing")
+			log.Log(log.Debug, "Incrementing")
 			s.Hit()
 		}
 	}
 	s, _ = rl.Store[ip][token]
 	lastHit := time.Now().Unix() - s.LastHit().Unix()
-	fmt.Printf("IP: %s, Token: %s, HitCount: %d, LastHit: %s, Blocked: %v\n", ip, token, s.HitCount(), fmt.Sprint(lastHit)+"s", s.IsBlocked())
+	log.Logf(log.Debug, "IP: %s, Token: %s, HitCount: %d, LastHit: %s, Blocked: %v\n", ip, token, s.HitCount(), fmt.Sprint(lastHit)+"s", s.IsBlocked())
 	if s.ShouldLimit() {
-		fmt.Println("Blocking")
+		log.Log(log.Debug, "Blocking")
 		s.Block()
 		return true
 	}
