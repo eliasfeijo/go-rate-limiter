@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 
@@ -34,7 +35,7 @@ func (m *RateLimiterMiddleware) Handler(next http.Handler) http.Handler {
 }
 
 func (m *RateLimiterMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ip := strings.Split(r.RemoteAddr, ":")[0]
+	ip, _, _ := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
 	token := r.Header.Get(m.rateLimiter.Config.TokensHeaderKey)
 	if m.rateLimiter.Limit(ip, token) {
 		cancelRequest(w)
