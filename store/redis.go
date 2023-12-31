@@ -37,7 +37,7 @@ func CreateRedisClient() {
 func NewRedisStore(ip string, token string, config *StoreConfig) *RedisStore {
 	ctx := context.Background()
 	key := ip + ":" + token
-	rdb.Set(ctx, key+":hitCount", 0, 0)
+	rdb.Set(ctx, key+":hitCount", 1, 0)
 	rdb.Set(ctx, key+":lastHit", time.Now().Unix(), 0)
 	rdb.Set(ctx, key+":isBlocked", false, 0)
 	return &RedisStore{config, key, ctx}

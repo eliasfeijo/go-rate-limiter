@@ -14,62 +14,101 @@ import (
 
 type LimiterTestSuite struct {
 	suite.Suite
-	rl                 *limiter.RateLimiter
-	store              store.IpStore
-	mockStore          *mocks.MockStore
-	onPrepareMockStore OnPrepareMockStore
+	rateLimiterConfig *config.RateLimiterConfig
 }
 
-type OnPrepareMockStore func(store *mocks.MockStore) store.Store
+var ip = "123"
+
+var defaultRateLimiterConfig = &config.RateLimiterConfig{
+	IpAddressMaxRequests:    3,
+	IpAddressLimitInSeconds: 1,
+	IpAddressBlockInSeconds: 5,
+	MapTokenConfig:          nil,
+	TokensHeaderKey:         "API_KEY",
+	StoreStrategy:           "test",
+	RedisConfig:             config.RedisConfig{},
+}
 
 func (suite *LimiterTestSuite) SetupTest() {
-	suite.store = make(store.IpStore)
-	mapTokenConfig := make(config.MapTokenConfig)
-	mapTokenConfig["test"] = &config.TokenConfig{
-		MaxRequests:    10,
-		LimitInSeconds: 60,
-		BlockInSeconds: 60,
-	}
-	suite.rl = limiter.NewRateLimiter(&config.RateLimiterConfig{
-		IpAddressMaxRequests:    10,
-		IpAddressLimitInSeconds: 60,
-		IpAddressBlockInSeconds: 60,
-		MapTokenConfig:          mapTokenConfig,
-		TokensHeaderKey:         "API_KEY",
-		StoreStrategy:           "test",
-		RedisConfig: config.RedisConfig{
-			Host:     "localhost",
-			Port:     "6379",
-			Password: "",
-			DB:       0,
-		},
-	}, func(store store.Store) store.Store {
-		suite.mockStore = &mocks.MockStore{}
-		if suite.onPrepareMockStore != nil {
-			return suite.onPrepareMockStore(suite.mockStore)
-		}
-		return suite.mockStore
-	})
+	suite.rateLimiterConfig = defaultRateLimiterConfig
 }
+
 func (s *LimiterTestSuite) TestShouldCreateStoreWhenItDoesNotExist() {
-	s.onPrepareMockStore = func(store *mocks.MockStore) store.Store {
-		store.On("HitCount").Return(uint(1))
-		store.On("IsBlocked").Return(false)
-		store.On("RemainingBlockTime").Return(uint(0))
-		store.On("ShouldLimit").Return(false)
-		store.On("ShouldRefresh").Return(false)
-		store.On("LastHit").Return(uint(0))
-		return store
-	}
-	ip := "123"
-	s.rl.Limit(ip, "")
-	store := s.rl.Store[ip][""]
-	assert.NotNil(s.T(), store)
-	assert.Equal(s.T(), uint(1), store.HitCount())
-	assert.Equal(s.T(), false, store.IsBlocked())
-	assert.Equal(s.T(), uint(0), store.RemainingBlockTime())
-	assert.Equal(s.T(), int64(0), store.LastHit().Unix())
-	s.mockStore.AssertCalled(s.T(), "ShouldLimit")
+	rl := limiter.NewRateLimiter(s.rateLimiterConfig, make(store.IpStore), func(store store.Store) store.Store {
+		mockStore := &mocks.MockStore{}
+		mockStore.On("ShouldLimit").Return(false)
+		return mockStore
+	})
+	result := rl.Limit(ip, "")
+	assert.False(s.T(), result)
+	assert.NotNil(s.T(), rl.Store[ip])
+	assert.NotNil(s.T(), rl.Store[ip][""])
+	assert.IsType(s.T(), &mocks.MockStore{}, rl.Store[ip][""])
+}
+
+func (s *LimiterTestSuite) TestRefresh() {
+	mockStore := &mocks.MockStore{}
+	mockStore.On("ShouldRefresh").Return(true)
+	mockStore.On("Refresh").Return()
+	mockStore.On("IsBlocked").Return(false)
+	mockStore.On("Hit").Return()
+	mockStore.On("ShouldLimit").Return(false)
+	mockStore.On("Block").Return()
+	ipStore := make(store.IpStore)
+	ipStore[ip] = make(store.TokenStore)
+	ipStore[ip][""] = mockStore
+	rl := limiter.NewRateLimiter(s.rateLimiterConfig, ipStore, nil)
+	result := rl.Limit(ip, "")
+	assert.False(s.T(), result)
+	store := rl.Store[ip][""].(*mocks.MockStore)
+	store.AssertCalled(s.T(), "ShouldRefresh")
+	store.AssertCalled(s.T(), "Refresh")
+	store.AssertNotCalled(s.T(), "IsBlocked")
+	store.AssertNotCalled(s.T(), "Hit")
+	store.AssertCalled(s.T(), "ShouldLimit")
+	store.AssertNotCalled(s.T(), "Block")
+}
+
+func (s *LimiterTestSuite) TestIsBlocked() {
+	mockStore := &mocks.MockStore{}
+	mockStore.On("ShouldRefresh").Return(false)
+	mockStore.On("IsBlocked").Return(true)
+	mockStore.On("Hit").Return()
+	mockStore.On("ShouldLimit").Return(false)
+	mockStore.On("Block").Return()
+	ipStore := make(store.IpStore)
+	ipStore[ip] = make(store.TokenStore)
+	ipStore[ip][""] = mockStore
+	rl := limiter.NewRateLimiter(s.rateLimiterConfig, ipStore, nil)
+	result := rl.Limit(ip, "")
+	assert.True(s.T(), result)
+	store := rl.Store[ip][""].(*mocks.MockStore)
+	store.AssertCalled(s.T(), "ShouldRefresh")
+	store.AssertCalled(s.T(), "IsBlocked")
+	store.AssertNotCalled(s.T(), "Hit")
+	store.AssertNotCalled(s.T(), "ShouldLimit")
+	store.AssertNotCalled(s.T(), "Block")
+}
+
+func (s *LimiterTestSuite) TestShouldLimitAndBlock() {
+	mockStore := &mocks.MockStore{}
+	mockStore.On("ShouldRefresh").Return(false)
+	mockStore.On("IsBlocked").Return(false)
+	mockStore.On("Hit").Return()
+	mockStore.On("ShouldLimit").Return(true)
+	mockStore.On("Block").Return()
+	ipStore := make(store.IpStore)
+	ipStore[ip] = make(store.TokenStore)
+	ipStore[ip][""] = mockStore
+	rl := limiter.NewRateLimiter(s.rateLimiterConfig, ipStore, nil)
+	result := rl.Limit(ip, "")
+	assert.True(s.T(), result)
+	store := rl.Store[ip][""].(*mocks.MockStore)
+	store.AssertCalled(s.T(), "ShouldRefresh")
+	store.AssertCalled(s.T(), "IsBlocked")
+	store.AssertCalled(s.T(), "Hit")
+	store.AssertCalled(s.T(), "ShouldLimit")
+	store.AssertCalled(s.T(), "Block")
 }
 
 func TestLimiterTestSuite(t *testing.T) {
