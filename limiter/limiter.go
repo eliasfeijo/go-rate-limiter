@@ -15,7 +15,7 @@ type RateLimiterConfig struct {
 	LimitInSecondsIpAddress uint64
 	BlockInSecondsIpAddress uint64
 	TokensHeaderKey         string
-	TokensConfig            config.TokensConfig
+	MapTokenConfig          config.MapTokenConfig
 }
 
 type RateLimiter struct {
@@ -46,9 +46,9 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 		limitInSeconds := rl.Config.LimitInSecondsIpAddress
 		blockInSeconds := rl.Config.BlockInSecondsIpAddress
 		if token != "" {
-			maxRequests = rl.Config.TokensConfig[token].MaxRequests
-			limitInSeconds = rl.Config.TokensConfig[token].LimitInSeconds
-			blockInSeconds = rl.Config.TokensConfig[token].BlockInSeconds
+			maxRequests = rl.Config.MapTokenConfig[token].MaxRequests
+			limitInSeconds = rl.Config.MapTokenConfig[token].LimitInSeconds
+			blockInSeconds = rl.Config.MapTokenConfig[token].BlockInSeconds
 		}
 		rl.Store[ip] = make(store.TokenStore)
 		switch rl.storeStrategy {

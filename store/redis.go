@@ -26,9 +26,9 @@ func CreateRedisClient() {
 	}
 	cfg := config.GetConfig()
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     cfg.RateLimiterRedisConfig.Host + ":" + cfg.RateLimiterRedisConfig.Port,
-		Password: cfg.RateLimiterRedisConfig.Password,
-		DB:       cfg.RateLimiterRedisConfig.DB,
+		Addr:     cfg.RedisConfig.Host + ":" + cfg.RedisConfig.Port,
+		Password: cfg.RedisConfig.Password,
+		DB:       cfg.RedisConfig.DB,
 	})
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		panic(err)

@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type RateLimiterTokenConfig struct {
+type TokenConfig struct {
 	// Max requests per token
 	MaxRequests uint64
 	// Token limit duration in seconds (the amount of time the max requests are allowed in)
@@ -21,7 +21,10 @@ type RateLimiterTokenConfig struct {
 	BlockInSeconds uint64
 }
 
-type RateLimiterRedisConfig struct {
+// A map of tokens configurations
+type MapTokenConfig map[string]*TokenConfig
+
+type RedisConfig struct {
 	// Redis host
 	Host string `mapstructure:"RATE_LIMITER_REDIS_HOST"`
 	// Redis port
@@ -32,31 +35,28 @@ type RateLimiterRedisConfig struct {
 	DB int `mapstructure:"RATE_LIMITER_REDIS_DB"`
 }
 
-// A map of tokens configurations
-type TokensConfig map[string]*RateLimiterTokenConfig
-
-type Config struct {
+type RateLimiterConfig struct {
 	// Max requests per IP address
-	RateLimiterIpAddressMaxRequests uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_MAX_REQUESTS"`
+	IpAddressMaxRequests uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_MAX_REQUESTS"`
 	// IP Address limit duration in seconds (the amount of time the max requests are allowed in)
-	RateLimiterIpAddressLimitInSeconds uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_LIMIT_IN_SECONDS"`
+	IpAddressLimitInSeconds uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_LIMIT_IN_SECONDS"`
 	// IP Address block duration in seconds (the amount of time the IP address is blocked for after exceeding the max requests)
-	RateLimiterIpAddressBlockInSeconds uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS"`
+	IpAddressBlockInSeconds uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS"`
 	// The requests' Header key to use for the tokens
-	RateLimiterTokensHeaderKey string `mapstructure:"RATE_LIMITER_TOKENS_HEADER_KEY"`
+	TokensHeaderKey string `mapstructure:"RATE_LIMITER_TOKENS_HEADER_KEY"`
 	// A list of tokens separated by a comma and their respective max requests, limit and block durations in seconds separated by a colon
-	RateLimiterTokensConfigTuple string `mapstructure:"RATE_LIMITER_TOKENS_CONFIG_TUPLE"`
+	MapTokenConfigTuple string `mapstructure:"RATE_LIMITER_TOKENS_CONFIG_TUPLE"`
 	// The strategy to use for the store
-	RateLimiterStoreStrategy string `mapstructure:"RATE_LIMITER_STORE_STRATEGY"`
+	StoreStrategy string `mapstructure:"RATE_LIMITER_STORE_STRATEGY"`
 
 	// A map of tokens and their respective max requests, limit and block durations in seconds
-	TokensConfig
+	MapTokenConfig
 
 	// Redis configuration
-	RateLimiterRedisConfig `mapstructure:",squash"`
+	RedisConfig `mapstructure:",squash"`
 }
 
-var config = &Config{}
+var config = &RateLimiterConfig{}
 
 func LoadConfig() (err error) {
 	viper.AutomaticEnv()
@@ -84,22 +84,22 @@ func LoadConfig() (err error) {
 
 	err = viper.Unmarshal(config)
 
-	if config.RateLimiterTokensConfigTuple != "" {
-		config.TokensConfig = make(TokensConfig)
-		viper.UnmarshalKey("RATE_LIMITER_TOKENS_CONFIG_TUPLE", &config.TokensConfig, viper.DecodeHook(tokensMapHookFunc()))
+	if config.MapTokenConfigTuple != "" {
+		config.MapTokenConfig = make(MapTokenConfig)
+		viper.UnmarshalKey("RATE_LIMITER_TOKENS_CONFIG_TUPLE", &config.MapTokenConfig, viper.DecodeHook(tokensMapHookFunc()))
 	}
 
-	log.Log(log.Debug, "IP Address Max Requests:", config.RateLimiterIpAddressMaxRequests)
-	log.Log(log.Debug, "IP Address Limit In Seconds:", config.RateLimiterIpAddressLimitInSeconds)
-	log.Log(log.Debug, "IP Address Block In Seconds:", config.RateLimiterIpAddressBlockInSeconds)
-	for token, tokenConfig := range config.TokensConfig {
+	log.Log(log.Debug, "IP Address Max Requests:", config.IpAddressMaxRequests)
+	log.Log(log.Debug, "IP Address Limit In Seconds:", config.IpAddressLimitInSeconds)
+	log.Log(log.Debug, "IP Address Block In Seconds:", config.IpAddressBlockInSeconds)
+	for token, tokenConfig := range config.MapTokenConfig {
 		log.Log(log.Debug, "Token:", token)
 		log.Log(log.Debug, tokenConfig)
 	}
 	return
 }
 
-func GetConfig() *Config {
+func GetConfig() *RateLimiterConfig {
 	return config
 }
 
@@ -115,7 +115,7 @@ func tokensMapHookFunc() mapstructure.DecodeHookFuncType {
 		}
 
 		// Check that the target type is our custom type
-		if t != reflect.TypeOf(TokensConfig{}) {
+		if t != reflect.TypeOf(MapTokenConfig{}) {
 			return data, nil
 		}
 
@@ -123,7 +123,7 @@ func tokensMapHookFunc() mapstructure.DecodeHookFuncType {
 		tuples := strings.Split(data.(string), ",")
 
 		// Create a map to store the tokens config
-		tokensConfig := make(map[string]*RateLimiterTokenConfig)
+		MapTokenConfig := make(map[string]*TokenConfig)
 
 		// Loop through the tokens config tuples
 		for _, tuple := range tuples {
@@ -146,18 +146,18 @@ func tokensMapHookFunc() mapstructure.DecodeHookFuncType {
 			if err != nil {
 				return nil, fmt.Errorf("Invalid token config tuple: %s", tuple)
 			}
-			tokensConfig[token] = &RateLimiterTokenConfig{
+			MapTokenConfig[token] = &TokenConfig{
 				MaxRequests,
 				LimitInSeconds,
 				BlockInSeconds,
 			}
 		}
 
-		return tokensConfig, nil
+		return MapTokenConfig, nil
 	}
 }
 
-func (t *RateLimiterTokenConfig) String() string {
+func (t *TokenConfig) String() string {
 	return fmt.Sprintf(
 		"Max Requests: %d, Limit In Seconds: %d, Block In Seconds: %d",
 		t.MaxRequests,
