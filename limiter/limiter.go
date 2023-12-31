@@ -10,27 +10,17 @@ import (
 	"github.com/eliasfeijo/go-rate-limiter/store"
 )
 
-type RateLimiterConfig struct {
-	MaxRequestsIpAddress    uint64
-	LimitInSecondsIpAddress uint64
-	BlockInSecondsIpAddress uint64
-	TokensHeaderKey         string
-	MapTokenConfig          config.MapTokenConfig
-}
-
 type RateLimiter struct {
-	Config        *RateLimiterConfig
-	Store         store.IpStore
-	storeStrategy string
-	mutex         sync.Mutex
+	Config *config.RateLimiterConfig
+	Store  store.IpStore
+	mutex  sync.Mutex
 }
 
-func NewRateLimiter(config *RateLimiterConfig, storeStrategy string) *RateLimiter {
+func NewRateLimiter(config *config.RateLimiterConfig) *RateLimiter {
 	return &RateLimiter{
-		Config:        config,
-		Store:         make(store.IpStore),
-		storeStrategy: storeStrategy,
-		mutex:         sync.Mutex{},
+		Config: config,
+		Store:  make(store.IpStore),
+		mutex:  sync.Mutex{},
 	}
 }
 
@@ -42,16 +32,16 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 
 	if s, ok := rl.Store[ip][token]; !ok {
 		log.Log(log.Debug, "Creating new store")
-		maxRequests := rl.Config.MaxRequestsIpAddress
-		limitInSeconds := rl.Config.LimitInSecondsIpAddress
-		blockInSeconds := rl.Config.BlockInSecondsIpAddress
+		maxRequests := rl.Config.IpAddressMaxRequests
+		limitInSeconds := rl.Config.IpAddressLimitInSeconds
+		blockInSeconds := rl.Config.IpAddressBlockInSeconds
 		if token != "" {
 			maxRequests = rl.Config.MapTokenConfig[token].MaxRequests
 			limitInSeconds = rl.Config.MapTokenConfig[token].LimitInSeconds
 			blockInSeconds = rl.Config.MapTokenConfig[token].BlockInSeconds
 		}
 		rl.Store[ip] = make(store.TokenStore)
-		switch rl.storeStrategy {
+		switch rl.Config.StoreStrategy {
 		case store.RedisStoreStrategy:
 			rl.Store[ip][token] = store.NewRedisStore(ip, token, uint(maxRequests), limitInSeconds, blockInSeconds)
 		default:

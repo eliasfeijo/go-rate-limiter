@@ -50,7 +50,7 @@ type RateLimiterConfig struct {
 	StoreStrategy string `mapstructure:"RATE_LIMITER_STORE_STRATEGY"`
 
 	// A map of tokens and their respective max requests, limit and block durations in seconds
-	MapTokenConfig
+	MapTokenConfig `mapstructure:"RATE_LIMITER_TOKENS_CONFIG_TUPLE"`
 
 	// Redis configuration
 	RedisConfig `mapstructure:",squash"`
@@ -82,12 +82,11 @@ func LoadConfig() (err error) {
 		}
 	}
 
-	err = viper.Unmarshal(config)
-
-	if config.MapTokenConfigTuple != "" {
-		config.MapTokenConfig = make(MapTokenConfig)
-		viper.UnmarshalKey("RATE_LIMITER_TOKENS_CONFIG_TUPLE", &config.MapTokenConfig, viper.DecodeHook(tokensMapHookFunc()))
-	}
+	err = viper.Unmarshal(config, viper.DecodeHook(mapstructure.ComposeDecodeHookFunc(
+		tokensMapHookFunc(),
+		mapstructure.StringToTimeDurationHookFunc(),
+		mapstructure.StringToSliceHookFunc(","),
+	)))
 
 	log.Log(log.Debug, "IP Address Max Requests:", config.IpAddressMaxRequests)
 	log.Log(log.Debug, "IP Address Limit In Seconds:", config.IpAddressLimitInSeconds)

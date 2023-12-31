@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 
-	"github.com/eliasfeijo/go-rate-limiter/limiter"
 	"github.com/eliasfeijo/go-rate-limiter/log"
 	"github.com/eliasfeijo/go-rate-limiter/middleware"
 	"github.com/go-chi/chi/v5"
@@ -13,14 +12,7 @@ import (
 func main() {
 	loadConfig()
 
-	rateLimiterConfig := &limiter.RateLimiterConfig{
-		MaxRequestsIpAddress:    config.RateLimiterConfig.IpAddressMaxRequests,
-		LimitInSecondsIpAddress: config.RateLimiterConfig.IpAddressLimitInSeconds,
-		BlockInSecondsIpAddress: config.RateLimiterConfig.IpAddressBlockInSeconds,
-		TokensHeaderKey:         config.RateLimiterConfig.TokensHeaderKey,
-		MapTokenConfig:          config.RateLimiterConfig.MapTokenConfig,
-	}
-	rateLimiterMiddleware := middleware.NewRateLimitMiddleware(rateLimiterConfig, config.RateLimiterConfig.StoreStrategy)
+	rateLimiterMiddleware := middleware.NewRateLimitMiddleware(&config.RateLimiterConfig)
 
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)

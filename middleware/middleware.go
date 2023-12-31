@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/eliasfeijo/go-rate-limiter/limiter"
 	"github.com/eliasfeijo/go-rate-limiter/store"
 )
@@ -15,14 +16,14 @@ type RateLimiterMiddleware struct {
 	rateLimiter *limiter.RateLimiter
 }
 
-func NewRateLimitMiddleware(config *limiter.RateLimiterConfig, storeStrategy string) *RateLimiterMiddleware {
-	if storeStrategy == store.RedisStoreStrategy {
+func NewRateLimitMiddleware(config *config.RateLimiterConfig) *RateLimiterMiddleware {
+	if config.StoreStrategy == store.RedisStoreStrategy {
 		store.CreateRedisClient()
 	}
 	return &RateLimiterMiddleware{
 		store:       make(store.IpStore),
 		handler:     http.DefaultServeMux,
-		rateLimiter: limiter.NewRateLimiter(config, storeStrategy),
+		rateLimiter: limiter.NewRateLimiter(config),
 	}
 }
 
