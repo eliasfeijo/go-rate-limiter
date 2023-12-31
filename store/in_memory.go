@@ -23,7 +23,7 @@ func (s *InMemoryStore) ShouldLimit() bool {
 }
 
 func (s *InMemoryStore) ShouldRefresh() bool {
-	LastHit := uint64(time.Now().Unix() - s.lastHit.Unix())
+	LastHit := uint(time.Now().Unix() - s.lastHit.Unix())
 	if s.isBlocked {
 		return LastHit > s.config.BlockInSeconds
 	}
@@ -40,8 +40,8 @@ func (s *InMemoryStore) IsBlocked() bool {
 	return s.isBlocked
 }
 
-func (s *InMemoryStore) RemainingBlockTime() uint64 {
-	return s.config.BlockInSeconds - uint64(time.Now().Unix()-s.lastHit.Unix())
+func (s *InMemoryStore) RemainingBlockTime() uint {
+	return s.config.BlockInSeconds - uint(time.Now().Unix()-s.lastHit.Unix())
 }
 
 func (s *InMemoryStore) Block() {

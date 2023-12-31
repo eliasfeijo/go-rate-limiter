@@ -70,7 +70,7 @@ func (s *RedisStore) ShouldRefresh() bool {
 		panic(err)
 	}
 
-	return uint64(time.Now().Unix()-lastHit) > s.config.LimitInSeconds
+	return uint(time.Now().Unix()-lastHit) > s.config.LimitInSeconds
 }
 
 func (s *RedisStore) Refresh() {
@@ -91,13 +91,13 @@ func (s *RedisStore) IsBlocked() bool {
 	return isBlocked
 }
 
-func (s *RedisStore) RemainingBlockTime() uint64 {
+func (s *RedisStore) RemainingBlockTime() uint {
 	expDuration, err := rdb.ExpireTime(s.ctx, s.key+":isBlocked").Result()
 	if err != nil {
 		expDuration = time.Duration(0) * time.Second
 	}
 	exp := expDuration.Seconds()
-	return uint64(exp) - uint64(time.Now().Unix())
+	return uint(exp) - uint(time.Now().Unix())
 }
 
 func (s *RedisStore) Block() {

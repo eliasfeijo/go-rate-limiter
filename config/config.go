@@ -14,11 +14,11 @@ import (
 
 type TokenConfig struct {
 	// Max requests per token
-	MaxRequests uint64
+	MaxRequests uint
 	// Token limit duration in seconds (the amount of time the max requests are allowed in)
-	LimitInSeconds uint64
+	LimitInSeconds uint
 	// Token block duration in seconds (the amount of time the token is blocked for after exceeding the max requests)
-	BlockInSeconds uint64
+	BlockInSeconds uint
 }
 
 // A map of tokens configurations
@@ -37,11 +37,11 @@ type RedisConfig struct {
 
 type RateLimiterConfig struct {
 	// Max requests per IP address
-	IpAddressMaxRequests uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_MAX_REQUESTS"`
+	IpAddressMaxRequests uint `mapstructure:"RATE_LIMITER_IP_ADDRESS_MAX_REQUESTS"`
 	// IP Address limit duration in seconds (the amount of time the max requests are allowed in)
-	IpAddressLimitInSeconds uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_LIMIT_IN_SECONDS"`
+	IpAddressLimitInSeconds uint `mapstructure:"RATE_LIMITER_IP_ADDRESS_LIMIT_IN_SECONDS"`
 	// IP Address block duration in seconds (the amount of time the IP address is blocked for after exceeding the max requests)
-	IpAddressBlockInSeconds uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS"`
+	IpAddressBlockInSeconds uint `mapstructure:"RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS"`
 	// The requests' Header key to use for the tokens
 	TokensHeaderKey string `mapstructure:"RATE_LIMITER_TOKENS_HEADER_KEY"`
 	// A list of tokens separated by a comma and their respective max requests, limit and block durations in seconds separated by a colon
@@ -146,9 +146,9 @@ func tokensMapHookFunc() mapstructure.DecodeHookFuncType {
 				return nil, fmt.Errorf("Invalid token config tuple: %s", tuple)
 			}
 			MapTokenConfig[token] = &TokenConfig{
-				MaxRequests,
-				LimitInSeconds,
-				BlockInSeconds,
+				MaxRequests:    uint(MaxRequests),
+				LimitInSeconds: uint(LimitInSeconds),
+				BlockInSeconds: uint(BlockInSeconds),
 			}
 		}
 

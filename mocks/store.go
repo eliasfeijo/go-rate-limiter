@@ -31,9 +31,9 @@ func (m *MockStore) IsBlocked() bool {
 	return args.Bool(0)
 }
 
-func (m *MockStore) RemainingBlockTime() uint64 {
+func (m *MockStore) RemainingBlockTime() uint {
 	args := m.Called()
-	return args.Get(0).(uint64)
+	return args.Get(0).(uint)
 }
 
 func (m *MockStore) Block() {
@@ -46,7 +46,7 @@ func (m *MockStore) Hit() {
 
 func (m *MockStore) LastHit() time.Time {
 	args := m.Called()
-	return time.Unix(0, int64(args.Get(0).(uint64)))
+	return time.Unix(0, int64(args.Get(0).(uint)))
 }
 
 func (m *MockStore) HitCount() uint {

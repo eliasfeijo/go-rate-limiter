@@ -46,8 +46,8 @@ func (suite *LimiterTestSuite) SetupTest() {
 		suite.mockStore.On("ShouldRefresh").Return(false)
 		suite.mockStore.On("HitCount").Return(uint(1))
 		suite.mockStore.On("IsBlocked").Return(false)
-		suite.mockStore.On("RemainingBlockTime").Return(uint64(0))
-		suite.mockStore.On("LastHit").Return(uint64(0))
+		suite.mockStore.On("RemainingBlockTime").Return(uint(0))
+		suite.mockStore.On("LastHit").Return(uint(0))
 		return &suite.mockStore
 	})
 }
@@ -57,7 +57,7 @@ func (s *LimiterTestSuite) TestShouldCreateStoreWhenTokenDoesNotExist() {
 	assert.NotNil(s.T(), s.rl.Store[ip][""])
 	assert.Equal(s.T(), uint(1), s.rl.Store[ip][""].HitCount())
 	assert.Equal(s.T(), false, s.rl.Store[ip][""].IsBlocked())
-	assert.Equal(s.T(), uint64(0), s.rl.Store[ip][""].RemainingBlockTime())
+	assert.Equal(s.T(), uint(0), s.rl.Store[ip][""].RemainingBlockTime())
 	assert.Equal(s.T(), int64(0), s.rl.Store[ip][""].LastHit().Unix())
 }
 

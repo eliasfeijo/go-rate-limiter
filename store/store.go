@@ -14,7 +14,7 @@ type Store interface {
 	ShouldRefresh() bool
 	Refresh()
 	IsBlocked() bool
-	RemainingBlockTime() uint64
+	RemainingBlockTime() uint
 	Block()
 	Hit()
 	LastHit() time.Time
@@ -26,8 +26,8 @@ type IpStore map[string]TokenStore
 
 type StoreConfig struct {
 	MaxRequests    uint
-	LimitInSeconds uint64
-	BlockInSeconds uint64
+	LimitInSeconds uint
+	BlockInSeconds uint
 }
 
 type StoreCreatedCallback func(store Store) Store
