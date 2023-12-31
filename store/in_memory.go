@@ -1,6 +1,8 @@
 package store
 
-import "time"
+import (
+	"time"
+)
 
 type InMemoryStore struct {
 	config    *StoreConfig
@@ -23,11 +25,11 @@ func (s *InMemoryStore) ShouldLimit() bool {
 }
 
 func (s *InMemoryStore) ShouldRefresh() bool {
-	LastHit := uint(time.Now().Unix() - s.lastHit.Unix())
+	LastHit := int(time.Now().Unix() - s.lastHit.Unix())
 	if s.isBlocked {
-		return LastHit > s.config.BlockInSeconds
+		return LastHit > int(s.config.BlockInSeconds)
 	}
-	return LastHit > s.config.LimitInSeconds
+	return LastHit > int(s.config.LimitInSeconds)
 }
 
 func (s *InMemoryStore) Refresh() {
