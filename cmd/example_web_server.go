@@ -3,21 +3,21 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
-	"github.com/eliasfeijo/go-rate-limiter/config"
+	rlconfig "github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/eliasfeijo/go-rate-limiter/limiter"
 	"github.com/eliasfeijo/go-rate-limiter/middleware"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/spf13/viper"
 )
 
-func main() {
-	err := config.LoadConfig()
-	if err != nil {
-		panic("Error loading config")
-	}
+var port string
 
-	cfg := config.GetConfig()
+func main() {
+	loadConfig()
+	cfg := rlconfig.GetConfig()
 
 	rateLimiterConfig := &limiter.RateLimiterConfig{
 		MaxRequestsIpAddress:    cfg.RateLimiterIpAddressMaxRequests,
@@ -35,5 +35,31 @@ func main() {
 		fmt.Fprintf(w, "Request accepted!")
 	})
 
-	http.ListenAndServe(":"+cfg.Port, r)
+	fmt.Println("Starting server on port " + port)
+	http.ListenAndServe(":"+port, r)
+}
+
+func loadConfig() {
+	viper.AddConfigPath("./")
+	viper.SetConfigFile(".env")
+	viper.SetConfigType("env")
+
+	viper.AutomaticEnv()
+
+	viper.SetDefault("PORT", 8080)
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		if err2, ok := err.(*os.PathError); !ok {
+			err = err2
+			panic("Error reading config file")
+		}
+	}
+
+	port = viper.GetString("PORT")
+
+	err = rlconfig.LoadConfig()
+	if err != nil {
+		panic("Error loading config")
+	}
 }

@@ -35,8 +35,6 @@ type RateLimiterRedisConfig struct {
 type TokensConfig map[string]*RateLimiterTokenConfig
 
 type Config struct {
-	// Server port
-	Port string `mapstructure:"PORT"`
 	// Max requests per IP address
 	RateLimiterIpAddressMaxRequests uint64 `mapstructure:"RATE_LIMITER_IP_ADDRESS_MAX_REQUESTS"`
 	// IP Address limit duration in seconds (the amount of time the max requests are allowed in)
@@ -60,14 +58,9 @@ type Config struct {
 var config = &Config{}
 
 func LoadConfig() (err error) {
-	viper.AddConfigPath("./")
-	viper.SetConfigFile(".env")
-	viper.SetConfigType("env")
-
 	viper.AutomaticEnv()
 
 	// Set defaults
-	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("RATE_LIMITER_IP_ADDRESS_MAX_REQUESTS", 2)
 	viper.SetDefault("RATE_LIMITER_IP_ADDRESS_LIMIT_IN_SECONDS", 1)
 	viper.SetDefault("RATE_LIMITER_IP_ADDRESS_BLOCK_IN_SECONDS", 5)
@@ -96,7 +89,6 @@ func LoadConfig() (err error) {
 	}
 
 	fmt.Println("Config loaded successfully")
-	fmt.Println("Server port:", config.Port)
 	fmt.Println("IP Address Max Requests:", config.RateLimiterIpAddressMaxRequests)
 	fmt.Println("IP Address Limit In Seconds:", config.RateLimiterIpAddressLimitInSeconds)
 	fmt.Println("IP Address Block In Seconds:", config.RateLimiterIpAddressBlockInSeconds)
