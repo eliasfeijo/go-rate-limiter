@@ -23,7 +23,7 @@ func NewRateLimitMiddleware(config *config.RateLimiterConfig) *RateLimiterMiddle
 	return &RateLimiterMiddleware{
 		store:       make(store.IpStore),
 		handler:     http.DefaultServeMux,
-		rateLimiter: limiter.NewRateLimiter(config),
+		rateLimiter: limiter.NewRateLimiter(config, nil),
 	}
 }
 

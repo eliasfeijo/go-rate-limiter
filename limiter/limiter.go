@@ -7,20 +7,23 @@ import (
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/eliasfeijo/go-rate-limiter/log"
+	"github.com/eliasfeijo/go-rate-limiter/mocks"
 	"github.com/eliasfeijo/go-rate-limiter/store"
 )
 
 type RateLimiter struct {
-	Config *config.RateLimiterConfig
-	Store  store.IpStore
-	mutex  sync.Mutex
+	Config         *config.RateLimiterConfig
+	Store          store.IpStore
+	mutex          sync.Mutex
+	onStoreCreated store.StoreCreatedCallback
 }
 
-func NewRateLimiter(config *config.RateLimiterConfig) *RateLimiter {
+func NewRateLimiter(config *config.RateLimiterConfig, storeCreatedCallback store.StoreCreatedCallback) *RateLimiter {
 	return &RateLimiter{
-		Config: config,
-		Store:  make(store.IpStore),
-		mutex:  sync.Mutex{},
+		Config:         config,
+		Store:          make(store.IpStore),
+		mutex:          sync.Mutex{},
+		onStoreCreated: storeCreatedCallback,
 	}
 }
 
@@ -41,14 +44,26 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 			blockInSeconds = rl.Config.MapTokenConfig[token].BlockInSeconds
 		}
 		rl.Store[ip] = make(store.TokenStore)
+		storeConfig := &store.StoreConfig{
+			MaxRequests:    uint(maxRequests),
+			LimitInSeconds: limitInSeconds,
+			BlockInSeconds: blockInSeconds,
+		}
 		switch rl.Config.StoreStrategy {
+		case "test":
+		case "mock":
+			s = mocks.NewMockStore()
+			fmt.Println(s)
 		case store.RedisStoreStrategy:
-			rl.Store[ip][token] = store.NewRedisStore(ip, token, uint(maxRequests), limitInSeconds, blockInSeconds)
+			s = store.NewRedisStore(ip, token, storeConfig)
 		default:
 		case store.InMemoryStoreStrategy:
-			rl.Store[ip][token] = store.NewInMemoryStore(uint(maxRequests), limitInSeconds, blockInSeconds)
+			s = store.NewInMemoryStore(storeConfig)
 		}
-		s = rl.Store[ip][token]
+		if rl.onStoreCreated != nil {
+			s = rl.onStoreCreated(s)
+		}
+		rl.Store[ip][token] = s
 	} else {
 		if s.ShouldRefresh() {
 			log.Logf(log.Debug, "IP: %s, Token: %s, Refreshing", ip, token)

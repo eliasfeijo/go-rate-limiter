@@ -1,6 +1,8 @@
 package store
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	InMemoryStoreStrategy = "in_memory"
@@ -21,3 +23,25 @@ type Store interface {
 
 type TokenStore map[string]Store
 type IpStore map[string]TokenStore
+
+type StoreConfig struct {
+	MaxRequests    uint
+	LimitInSeconds uint64
+	BlockInSeconds uint64
+}
+
+type StoreCreatedCallback func(store Store) Store
+
+// func NewStore(storeStrategy string, ip string, token string, config *StoreConfig) Store {
+// 	switch storeStrategy {
+// 	case "test":
+// 	case "mock":
+// 		return mocks.NewMockStore()
+// 	case RedisStoreStrategy:
+// 		return NewRedisStore(ip, token, config)
+// 	default:
+// 	case InMemoryStoreStrategy:
+// 		return NewInMemoryStore(config)
+// 	}
+// 	return nil
+// }

@@ -3,35 +3,31 @@ package store
 import "time"
 
 type InMemoryStore struct {
-	MaxRequests    uint
-	LimitInSeconds uint64
-	BlockInSeconds uint64
-	hitCount       uint
-	lastHit        time.Time
-	isBlocked      bool
+	config    *StoreConfig
+	hitCount  uint
+	lastHit   time.Time
+	isBlocked bool
 }
 
-func NewInMemoryStore(maxRequests uint, limitInSeconds uint64, blockInSeconds uint64) *InMemoryStore {
+func NewInMemoryStore(config *StoreConfig) *InMemoryStore {
 	return &InMemoryStore{
-		MaxRequests:    maxRequests,
-		LimitInSeconds: limitInSeconds,
-		BlockInSeconds: blockInSeconds,
-		hitCount:       1,
-		lastHit:        time.Now(),
-		isBlocked:      false,
+		config:    config,
+		hitCount:  1,
+		lastHit:   time.Now(),
+		isBlocked: false,
 	}
 }
 
 func (s *InMemoryStore) ShouldLimit() bool {
-	return s.hitCount > s.MaxRequests
+	return s.hitCount > s.config.MaxRequests
 }
 
 func (s *InMemoryStore) ShouldRefresh() bool {
 	LastHit := uint64(time.Now().Unix() - s.lastHit.Unix())
 	if s.isBlocked {
-		return LastHit > s.BlockInSeconds
+		return LastHit > s.config.BlockInSeconds
 	}
-	return LastHit > s.LimitInSeconds
+	return LastHit > s.config.LimitInSeconds
 }
 
 func (s *InMemoryStore) Refresh() {
@@ -45,7 +41,7 @@ func (s *InMemoryStore) IsBlocked() bool {
 }
 
 func (s *InMemoryStore) RemainingBlockTime() uint64 {
-	return s.BlockInSeconds - uint64(time.Now().Unix()-s.lastHit.Unix())
+	return s.config.BlockInSeconds - uint64(time.Now().Unix()-s.lastHit.Unix())
 }
 
 func (s *InMemoryStore) Block() {

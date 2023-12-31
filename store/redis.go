@@ -13,11 +13,9 @@ import (
 var rdb *redis.Client
 
 type RedisStore struct {
-	MaxRequests    uint
-	LimitInSeconds uint64
-	BlockInSeconds uint64
-	key            string
-	ctx            context.Context
+	config *StoreConfig
+	key    string
+	ctx    context.Context
 }
 
 func CreateRedisClient() {
@@ -36,13 +34,13 @@ func CreateRedisClient() {
 	log.Log(log.Info, "Redis connection created successfully: ", rdb)
 }
 
-func NewRedisStore(ip string, token string, maxRequests uint, limitInSeconds uint64, blockInSeconds uint64) *RedisStore {
+func NewRedisStore(ip string, token string, config *StoreConfig) *RedisStore {
 	ctx := context.Background()
 	key := ip + ":" + token
 	rdb.Set(ctx, key+":hitCount", 0, 0)
 	rdb.Set(ctx, key+":lastHit", time.Now().Unix(), 0)
 	rdb.Set(ctx, key+":isBlocked", false, 0)
-	return &RedisStore{maxRequests, limitInSeconds, blockInSeconds, key, ctx}
+	return &RedisStore{config, key, ctx}
 }
 
 func (s *RedisStore) ShouldLimit() bool {
@@ -54,7 +52,7 @@ func (s *RedisStore) ShouldLimit() bool {
 	if err != nil {
 		panic(err)
 	}
-	return uint(hitCount) > s.MaxRequests
+	return uint(hitCount) > s.config.MaxRequests
 }
 
 func (s *RedisStore) ShouldRefresh() bool {
@@ -72,7 +70,7 @@ func (s *RedisStore) ShouldRefresh() bool {
 		panic(err)
 	}
 
-	return uint64(time.Now().Unix()-lastHit) > s.LimitInSeconds
+	return uint64(time.Now().Unix()-lastHit) > s.config.LimitInSeconds
 }
 
 func (s *RedisStore) Refresh() {
@@ -103,7 +101,7 @@ func (s *RedisStore) RemainingBlockTime() uint64 {
 }
 
 func (s *RedisStore) Block() {
-	rdb.Set(s.ctx, s.key+":isBlocked", true, time.Duration(s.BlockInSeconds)*time.Second)
+	rdb.Set(s.ctx, s.key+":isBlocked", true, time.Duration(s.config.BlockInSeconds)*time.Second)
 }
 
 func (s *RedisStore) Hit() {
