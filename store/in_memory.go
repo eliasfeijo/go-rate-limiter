@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -54,6 +55,7 @@ func (s *InMemoryStore) Hit() {
 	s.hitCount++
 	s.lastHit = time.Now()
 	if s.ShouldLimit() {
+		fmt.Println("isBlocked")
 		s.isBlocked = true
 	}
 }

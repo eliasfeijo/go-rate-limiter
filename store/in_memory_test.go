@@ -53,4 +53,69 @@ func TestInMemoryStore_ShouldRefresh(t *testing.T) {
 	}
 }
 
-// Add more test cases for the other methods in InMemoryStore
+func TestInMemoryStore_Refresh(t *testing.T) {
+	config := &StoreConfig{
+		MaxRequests:    5,
+		LimitInSeconds: 1,
+		BlockInSeconds: 1,
+	}
+	store := NewInMemoryStore(config)
+
+	store.hitCount = 10
+	store.lastHit = time.Now().Add(-100 * time.Second)
+	store.isBlocked = true
+	store.Refresh()
+
+	if store.hitCount != 1 {
+		t.Error("Refresh() did not reset hit count")
+	}
+	if store.lastHit.Unix() != time.Now().Unix() {
+		t.Error("Refresh() did not reset last hit time")
+	}
+	if store.isBlocked {
+		t.Error("Refresh() did not reset isBlocked")
+	}
+}
+
+func TestInMemoryStore_Block(t *testing.T) {
+	config := &StoreConfig{
+		MaxRequests:    5,
+		LimitInSeconds: 1,
+		BlockInSeconds: 1,
+	}
+	store := NewInMemoryStore(config)
+
+	store.Block()
+	if !store.isBlocked {
+		t.Error("Block() did not set isBlocked")
+	}
+}
+
+func TestInMemoryStore_Hit(t *testing.T) {
+	config := &StoreConfig{
+		MaxRequests:    5,
+		LimitInSeconds: 1,
+		BlockInSeconds: 1,
+	}
+	store := NewInMemoryStore(config)
+
+	store.hitCount = 1
+	store.lastHit = time.Now().Add(-100 * time.Second)
+	store.isBlocked = false
+	store.Hit()
+
+	if store.hitCount != 2 {
+		t.Error("Hit() did not increment hit count")
+	}
+	if store.lastHit.Unix() != time.Now().Unix() {
+		t.Error("Hit() did not reset last hit time")
+	}
+	if store.isBlocked {
+		t.Error("Hit() blocked when hit count is below the limit")
+	}
+	store.hitCount = 5
+	store.Hit()
+	if !store.isBlocked {
+		t.Error("Hit() did not set isBlocked")
+	}
+}
