@@ -9,10 +9,23 @@ import (
 
 // Logger is a simple logger that prints to stdout
 type Logger struct {
+	LogLevel log.LogLevel
+}
+
+func NewLogger(logLevel log.LogLevel) *Logger {
+	if logLevel < log.Debug {
+		logLevel = log.Debug
+	} else if logLevel > log.Panic {
+		logLevel = log.Panic
+	}
+	return &Logger{logLevel}
 }
 
 // Log prints a line to stdout
-func (l *Logger) Log(level log.Level, args ...interface{}) {
+func (l *Logger) Log(level log.LogLevel, args ...interface{}) {
+	if level < l.LogLevel {
+		return
+	}
 	switch level {
 	case log.Debug:
 		fmt.Println("DEBUG: ", args)
@@ -33,7 +46,10 @@ func (l *Logger) Log(level log.Level, args ...interface{}) {
 }
 
 // Logf prints a formatted line to stdout
-func (l *Logger) Logf(level log.Level, format string, args ...interface{}) {
+func (l *Logger) Logf(level log.LogLevel, format string, args ...interface{}) {
+	if level < l.LogLevel {
+		return
+	}
 	switch level {
 	case 0:
 		fmt.Printf("DEBUG: "+format, args...)
