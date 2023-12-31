@@ -14,10 +14,13 @@ import (
 
 type LimiterTestSuite struct {
 	suite.Suite
-	rl        *limiter.RateLimiter
-	store     store.IpStore
-	mockStore mocks.MockStore
+	rl                 *limiter.RateLimiter
+	store              store.IpStore
+	mockStore          *mocks.MockStore
+	onPrepareMockStore OnPrepareMockStore
 }
+
+type OnPrepareMockStore func(store *mocks.MockStore) store.Store
 
 func (suite *LimiterTestSuite) SetupTest() {
 	suite.store = make(store.IpStore)
@@ -41,24 +44,32 @@ func (suite *LimiterTestSuite) SetupTest() {
 			DB:       0,
 		},
 	}, func(store store.Store) store.Store {
-		suite.mockStore = mocks.MockStore{}
-		suite.mockStore.On("ShouldLimit").Return(false)
-		suite.mockStore.On("ShouldRefresh").Return(false)
-		suite.mockStore.On("HitCount").Return(uint(1))
-		suite.mockStore.On("IsBlocked").Return(false)
-		suite.mockStore.On("RemainingBlockTime").Return(uint(0))
-		suite.mockStore.On("LastHit").Return(uint(0))
-		return &suite.mockStore
+		suite.mockStore = &mocks.MockStore{}
+		if suite.onPrepareMockStore != nil {
+			return suite.onPrepareMockStore(suite.mockStore)
+		}
+		return suite.mockStore
 	})
 }
-func (s *LimiterTestSuite) TestShouldCreateStoreWhenTokenDoesNotExist() {
+func (s *LimiterTestSuite) TestShouldCreateStoreWhenItDoesNotExist() {
+	s.onPrepareMockStore = func(store *mocks.MockStore) store.Store {
+		store.On("HitCount").Return(uint(1))
+		store.On("IsBlocked").Return(false)
+		store.On("RemainingBlockTime").Return(uint(0))
+		store.On("ShouldLimit").Return(false)
+		store.On("ShouldRefresh").Return(false)
+		store.On("LastHit").Return(uint(0))
+		return store
+	}
 	ip := "123"
 	s.rl.Limit(ip, "")
-	assert.NotNil(s.T(), s.rl.Store[ip][""])
-	assert.Equal(s.T(), uint(1), s.rl.Store[ip][""].HitCount())
-	assert.Equal(s.T(), false, s.rl.Store[ip][""].IsBlocked())
-	assert.Equal(s.T(), uint(0), s.rl.Store[ip][""].RemainingBlockTime())
-	assert.Equal(s.T(), int64(0), s.rl.Store[ip][""].LastHit().Unix())
+	store := s.rl.Store[ip][""]
+	assert.NotNil(s.T(), store)
+	assert.Equal(s.T(), uint(1), store.HitCount())
+	assert.Equal(s.T(), false, store.IsBlocked())
+	assert.Equal(s.T(), uint(0), store.RemainingBlockTime())
+	assert.Equal(s.T(), int64(0), store.LastHit().Unix())
+	s.mockStore.AssertCalled(s.T(), "ShouldLimit")
 }
 
 func TestLimiterTestSuite(t *testing.T) {

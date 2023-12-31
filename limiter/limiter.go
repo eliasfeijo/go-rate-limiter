@@ -3,7 +3,6 @@ package limiter
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/eliasfeijo/go-rate-limiter/config"
 	"github.com/eliasfeijo/go-rate-limiter/log"
@@ -45,7 +44,7 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 		}
 		rl.Store[ip] = make(store.TokenStore)
 		storeConfig := &store.StoreConfig{
-			MaxRequests:    uint(maxRequests),
+			MaxRequests:    maxRequests,
 			LimitInSeconds: limitInSeconds,
 			BlockInSeconds: blockInSeconds,
 		}
@@ -70,7 +69,6 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 			s.Refresh()
 		} else {
 			if s.IsBlocked() {
-				log.Logf(log.Debug, "IP: %s, Token: %s, Blocked for more %d seconds", ip, token, s.RemainingBlockTime())
 				return true
 			}
 			log.Log(log.Debug, "Incrementing")
@@ -78,8 +76,6 @@ func (rl *RateLimiter) Limit(ip string, token string) bool {
 		}
 	}
 	s, _ = rl.Store[ip][token]
-	lastHit := time.Now().Unix() - s.LastHit().Unix()
-	log.Logf(log.Debug, "IP: %s, Token: %s, HitCount: %d, LastHit: %s, Blocked: %v\n", ip, token, s.HitCount(), fmt.Sprint(lastHit)+"s", s.IsBlocked())
 	if s.ShouldLimit() {
 		log.Log(log.Debug, "Blocking")
 		s.Block()
